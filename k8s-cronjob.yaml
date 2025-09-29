@@ -1,0 +1,75 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: parking-parrot-sync
+  namespace: default
+spec:
+  schedule: "0 2 * * 0"  # Каждое воскресенье в 2:00
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sync-parkings
+            image: parking-parrot:latest
+            command: ["python", "-m", "parking_parrot.sync_parkings"]
+            env:
+            - name: LOGGER__FORMAT
+              value: "json"
+            - name: MONGODB__ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-parrot-config
+                  key: MONGODB__ADDRESS
+            - name: MONGODB__USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: parking-parrot-secrets
+                  key: MONGODB__USERNAME
+            - name: MONGODB__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: parking-parrot-secrets
+                  key: MONGODB__PASSWORD
+            - name: MONGODB__DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-parrot-config
+                  key: MONGODB__DATABASE
+            - name: PARKING_DATA_SOURCE__URL
+              valueFrom:
+                configMapKeyRef:
+                  name: parking-parrot-config
+                  key: PARKING_DATA_SOURCE__URL
+            - name: PARKING_DATA_SOURCE__TIMEOUT_SECS
+              value: "60"
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "200m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+          restartPolicy: OnFailure
+          backoffLimit: 3
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: parking-parrot-config
+  namespace: default
+data:
+  MONGODB__ADDRESS: "mongodb-service:27017"
+  MONGODB__DATABASE: "parking_parrot_db"
+  MONGODB__COLLECTION: "parkings"
+  PARKING_DATA_SOURCE__URL: "https://lk.parking.mos.ru/api/3.0/parkings"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: parking-parrot-secrets
+  namespace: default
+type: Opaque
+data:
+  MONGODB__USERNAME: cm9vdA==  # base64 encoded "root"
+  MONGODB__PASSWORD: cm9vdA==  # base64 encoded "root"

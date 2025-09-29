@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  parking:
+    build: .
+    ports:
+      - "3847:3847"
+    environment:
+      - LOGGER__FORMAT=pretty
+      - HTTP_SERVER__HOST=0.0.0.0
+      - HTTP_SERVER__PORT=3847
+      - CORS__ALLOW_ORIGINS=["*"]
+      - CORS__ALLOW_CREDENTIALS=true
+      - CORS__ALLOW_METHODS=["*"]
+      - CORS__ALLOW_HEADERS=["*"]
+      - SEARCH__DEFAULT_LIMIT=20
+      - SEARCH__MAX_LIMIT=100
+      - SEARCH__EARTH_RADIUS_METERS=6371000
+      - MONGODB__ADDRESS=mongodb:27017
+      - MONGODB__USERNAME=root
+      - MONGODB__PASSWORD=root
+      - MONGODB__DATABASE=parking_db
+      - MONGODB__COLLECTION=parkings
+      - MONGODB__EXPIRED_SECS=7776000
+      - PARKING_DATA_SOURCE__URL=https://lk.parking.mos.ru/api/3.0/parkings
+      - PARKING_DATA_SOURCE__TIMEOUT_SECS=60
+      - FILE_DATA_SOURCE__PATH=./dump.json
+    depends_on:
+      - mongodb
+    volumes:
+      - ./parking:/app/parking
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: parking_db
+    volumes:
+      - mongodb_data:/data/db
+      - ./config/mongodb/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
