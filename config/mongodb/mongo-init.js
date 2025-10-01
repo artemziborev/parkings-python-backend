@@ -1,5 +1,5 @@
-// Инициализация MongoDB для parking_db
-db = db.getSiblingDB('parking_db');
+// Инициализация MongoDB для parking_parrot_db
+db = db.getSiblingDB('parking_parrot_db');
 
 // Создаем коллекцию parkings
 db.createCollection('parkings');
@@ -13,4 +13,4 @@ db.parkings.createIndex({"name.ru": "text", "name.en": "text"});
 // Создаем индекс для поиска по литере/номеру
 db.parkings.createIndex({"litera": 1});
 
-print("MongoDB initialization completed for parking_db");
+print("MongoDB initialization completed for parking_parrot_db");

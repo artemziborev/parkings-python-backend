@@ -1,23 +1,22 @@
 """Tests for HTTP server."""
 
-import pytest
-from unittest.mock import AsyncMock, patch
-from fastapi.testclient import TestClient
-from fastapi import HTTPException
+from unittest.mock import AsyncMock
 
-from parking.infrastructure.http_server import setup_routes
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from parking.api.http_server import setup_routes
 from parking.application.use_cases import UseCases
 from parking.domain.models import (
-    Coordinates, 
-    Parking, 
-    LangString,
     Address,
-    Geometry,
     Category,
+    Geometry,
+    LangString,
+    Parking,
     Spaces,
-    Zone
+    Zone,
 )
-from fastapi import FastAPI
 
 
 @pytest.fixture
@@ -45,8 +44,8 @@ def sample_parking():
             city="Moscow",
             description=LangString(en="Test zone", ru="Test zone"),
             number="A001",
-            type="paid"
-        )
+            type="paid",
+        ),
     )
 
 
@@ -60,10 +59,10 @@ def mock_use_cases():
 def test_app(mock_use_cases):
     """Creates test FastAPI application."""
     app = FastAPI()
-    
+
     # Mock application state
     app.state.use_cases = mock_use_cases
-    
+
     setup_routes(app)
     return app
 
@@ -85,24 +84,19 @@ def test_search_parkings_by_coords_success(client, mock_use_cases, sample_parkin
     """Tests successful parking search by coordinates."""
     # Setup
     mock_use_cases.get_parking_spot_by_coordinates.return_value = [sample_parking]
-    
+
     # Execute
     response = client.get(
         "/api/v1/mos_parking/parking",
-        params={
-            "lat": 55.7558,
-            "long": 37.6176,
-            "distance": 1000,
-            "limit": 5
-        }
+        params={"lat": 55.7558, "long": 37.6176, "distance": 1000, "limit": 5},
     )
-    
+
     # Verify
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
     assert data[0]["_id"] == 1
-    
+
     mock_use_cases.get_parking_spot_by_coordinates.assert_called_once()
 
 
@@ -110,18 +104,13 @@ def test_search_parkings_by_coords_empty(client, mock_use_cases):
     """Tests parking search by coordinates without results."""
     # Setup
     mock_use_cases.get_parking_spot_by_coordinates.return_value = []
-    
+
     # Execute
     response = client.get(
         "/api/v1/mos_parking/parking",
-        params={
-            "lat": 55.7558,
-            "long": 37.6176,
-            "distance": 1000,
-            "limit": 5
-        }
+        params={"lat": 55.7558, "long": 37.6176, "distance": 1000, "limit": 5},
     )
-    
+
     # Verify
     assert response.status_code == 404
     data = response.json()
@@ -132,15 +121,15 @@ def test_get_parking_by_id_success(client, mock_use_cases, sample_parking):
     """Tests successful parking retrieval by ID."""
     # Setup
     mock_use_cases.get_parking_by_id.return_value = sample_parking
-    
+
     # Execute
     response = client.get("/api/v1/mos_parking/parking/1")
-    
+
     # Verify
     assert response.status_code == 200
     data = response.json()
     assert data["_id"] == 1
-    
+
     mock_use_cases.get_parking_by_id.assert_called_once_with(1)
 
 
@@ -148,10 +137,10 @@ def test_get_parking_by_id_not_found(client, mock_use_cases):
     """Tests retrieval of non-existent parking by ID."""
     # Setup
     mock_use_cases.get_parking_by_id.return_value = None
-    
+
     # Execute
     response = client.get("/api/v1/mos_parking/parking/999")
-    
+
     # Verify
     assert response.status_code == 404
     data = response.json()
@@ -162,18 +151,15 @@ def test_search_parkings_by_name_success(client, mock_use_cases, sample_parking)
     """Tests successful parking search by name."""
     # Setup
     mock_use_cases.get_parking_by_name.return_value = [sample_parking]
-    
+
     # Execute
-    response = client.get(
-        "/api/v1/mos_parking/parking/search",
-        params={"name": "Test"}
-    )
-    
+    response = client.get("/api/v1/mos_parking/parking/search", params={"name": "Test"})
+
     # Verify
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
-    
+
     mock_use_cases.get_parking_by_name.assert_called_once()
 
 
@@ -181,13 +167,12 @@ def test_search_parkings_by_name_not_found(client, mock_use_cases):
     """Tests parking search by name without results."""
     # Setup
     mock_use_cases.get_parking_by_name.return_value = []
-    
+
     # Execute
     response = client.get(
-        "/api/v1/mos_parking/parking/search",
-        params={"name": "Nonexistent"}
+        "/api/v1/mos_parking/parking/search", params={"name": "Nonexistent"}
     )
-    
+
     # Verify
     assert response.status_code == 404
     data = response.json()
@@ -201,16 +186,16 @@ def test_sync_parking_data_success(client, mock_use_cases):
     """Tests successful parking data synchronization."""
     # Setup
     mock_use_cases.save_or_update_parking_spots.return_value = None
-    
+
     # Execute
     response = client.post("/api/v1/mos_parking/sync")
-    
+
     # Verify
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
     assert "synchronization completed successfully" in data["message"]
-    
+
     mock_use_cases.save_or_update_parking_spots.assert_called_once()
 
 
@@ -218,12 +203,11 @@ def test_sync_parking_data_error(client, mock_use_cases):
     """Tests parking data synchronization with error."""
     # Setup
     mock_use_cases.save_or_update_parking_spots.side_effect = Exception("Sync failed")
-    
+
     # Execute
     response = client.post("/api/v1/mos_parking/sync")
-    
+
     # Verify
     assert response.status_code == 500
     data = response.json()
     assert data["detail"]["error"] == "Internal Server Error"
-

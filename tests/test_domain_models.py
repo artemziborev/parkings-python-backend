@@ -1,15 +1,15 @@
 """Tests for domain models."""
 
 from parking.domain.models import (
-    Coordinates,
-    Parking,
     ActiveParkings,
-    filter_active_parkings,
-    LangString,
     Address,
-    Geometry,
     Category,
+    Coordinates,
+    Geometry,
+    LangString,
+    Parking,
     Spaces,
+    filter_active_parkings,
 )
 
 
@@ -40,9 +40,9 @@ def test_parking_is_active():
         resolutionAddress="Test address",
         spaces=Spaces(total=10),
     )
-    
+
     assert active_parking.is_active() is True
-    
+
     # Disabled parking
     disabled_parking = Parking(
         _id=2,
@@ -61,7 +61,7 @@ def test_parking_is_active():
         resolutionAddress="Test address",
         spaces=Spaces(total=10),
     )
-    
+
     assert disabled_parking.is_active() is False
 
 
@@ -88,18 +88,21 @@ def test_filter_active_parkings():
             resolutionAddress="Test address",
             spaces=Spaces(total=10),
         )
-        for i, name in enumerate([
-            "Active Parking 1",
-            "Disabled Parking",
-            "Active Parking 2",
-        ], 1)
+        for i, name in enumerate(
+            [
+                "Active Parking 1",
+                "Disabled Parking",
+                "Active Parking 2",
+            ],
+            1,
+        )
     ]
-    
+
     active_parkings = filter_active_parkings(parkings)
-    
+
     assert len(active_parkings) == 2
     assert not active_parkings.is_empty()
-    
+
     active_list = active_parkings.to_list()
     assert len(active_list) == 2
     assert active_list[0].name.en == "Active Parking 1"
@@ -109,7 +112,7 @@ def test_filter_active_parkings():
 def test_active_parkings_empty():
     """Tests empty active parkings collection."""
     empty_parkings = ActiveParkings([])
-    
+
     assert len(empty_parkings) == 0
     assert empty_parkings.is_empty() is True
     assert empty_parkings.to_list() == []

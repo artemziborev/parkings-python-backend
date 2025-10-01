@@ -1,15 +1,15 @@
 """Tests for configuration."""
 
 import os
-import pytest
-from parking.infrastructure.config import (
-    LoggerConfig,
-    HttpServerConfig,
+
+from parking.application.config import (
     CORSConfig,
-    SearchConfig,
+    FileDataSourceConfig,
+    HttpServerConfig,
+    LoggerConfig,
     MongoDBConfig,
     ParkingDataSourceConfig,
-    FileDataSourceConfig,
+    SearchConfig,
     ServiceConfig,
 )
 
@@ -39,10 +39,7 @@ def test_http_server_config_custom():
 def test_mongodb_config():
     """Tests MongoDBConfig."""
     config = MongoDBConfig(
-        address="localhost:27017",
-        username="user",
-        password="pass",
-        database="testdb"
+        address="localhost:27017", username="user", password="pass", database="testdb"
     )
     assert config.address == "localhost:27017"
     assert config.username == "user"
@@ -50,7 +47,10 @@ def test_mongodb_config():
     assert config.database == "testdb"
     assert config.collection == "parkings"
     assert config.expired_secs == 7776000
-    assert config.connection_string == "mongodb://user:pass@localhost:27017/testdb?authSource=admin"
+    assert (
+        config.connection_string
+        == "mongodb://user:pass@localhost:27017/testdb?authSource=admin"
+    )
 
 
 def test_mongodb_config_custom_collection():
@@ -60,7 +60,7 @@ def test_mongodb_config_custom_collection():
         username="user",
         password="pass",
         database="testdb",
-        collection="custom_parkings"
+        collection="custom_parkings",
     )
     assert config.collection == "custom_parkings"
 
@@ -74,10 +74,7 @@ def test_parking_data_source_config():
 
 def test_parking_data_source_config_custom_timeout():
     """Tests ParkingDataSourceConfig with custom timeout."""
-    config = ParkingDataSourceConfig(
-        url="https://example.com/api",
-        timeout_secs=120
-    )
+    config = ParkingDataSourceConfig(url="https://example.com/api", timeout_secs=120)
     assert config.timeout_secs == 120
 
 
@@ -110,7 +107,7 @@ def test_cors_config_custom():
         allow_origins=["http://localhost:3000", "https://example.com"],
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "Authorization"]
+        allow_headers=["Content-Type", "Authorization"],
     )
     assert config.allow_origins == ["http://localhost:3000", "https://example.com"]
     assert config.allow_credentials is False
@@ -128,11 +125,7 @@ def test_search_config_defaults():
 
 def test_search_config_custom():
     """Tests custom values for SearchConfig."""
-    config = SearchConfig(
-        default_limit=50,
-        max_limit=200,
-        earth_radius_meters=6378137
-    )
+    config = SearchConfig(default_limit=50, max_limit=200, earth_radius_meters=6378137)
     assert config.default_limit == 50
     assert config.max_limit == 200
     assert config.earth_radius_meters == 6378137
@@ -141,17 +134,19 @@ def test_search_config_custom():
 def test_service_config_with_environment_variables():
     """Tests ServiceConfig with environment variables."""
     # Set environment variables
-    os.environ.update({
-        "LOGGER__FORMAT": "json",
-        "HTTP_SERVER__HOST": "127.0.0.1",
-        "HTTP_SERVER__PORT": "8000",
-        "CORS__ALLOW_ORIGINS": '["http://localhost:3000"]',
-        "SEARCH__DEFAULT_LIMIT": "50",
-        "MONGODB__ADDRESS": "test-mongo:27017",
-        "MONGODB__DATABASE": "test_db",
-        "PARKING_DATA_SOURCE__URL": "https://test-api.com/parkings"
-    })
-    
+    os.environ.update(
+        {
+            "LOGGER__FORMAT": "json",
+            "HTTP_SERVER__HOST": "127.0.0.1",
+            "HTTP_SERVER__PORT": "8000",
+            "CORS__ALLOW_ORIGINS": '["http://localhost:3000"]',
+            "SEARCH__DEFAULT_LIMIT": "50",
+            "MONGODB__ADDRESS": "test-mongo:27017",
+            "MONGODB__DATABASE": "test_db",
+            "PARKING_DATA_SOURCE__URL": "https://test-api.com/parkings",
+        }
+    )
+
     try:
         config = ServiceConfig()
         assert config.logger.format == "json"
@@ -165,8 +160,13 @@ def test_service_config_with_environment_variables():
     finally:
         # Clean up environment variables
         for key in [
-            "LOGGER__FORMAT", "HTTP_SERVER__HOST", "HTTP_SERVER__PORT",
-            "CORS__ALLOW_ORIGINS", "SEARCH__DEFAULT_LIMIT", "MONGODB__ADDRESS",
-            "MONGODB__DATABASE", "PARKING_DATA_SOURCE__URL"
+            "LOGGER__FORMAT",
+            "HTTP_SERVER__HOST",
+            "HTTP_SERVER__PORT",
+            "CORS__ALLOW_ORIGINS",
+            "SEARCH__DEFAULT_LIMIT",
+            "MONGODB__ADDRESS",
+            "MONGODB__DATABASE",
+            "PARKING_DATA_SOURCE__URL",
         ]:
             os.environ.pop(key, None)

@@ -1,17 +1,18 @@
 """Logging configuration."""
 
-import sys
-from typing import Literal
+from typing import Any, Literal
 
 import structlog
 from structlog.typing import FilteringBoundLogger
 
 
-def init_logger(format_type: Literal["json", "pretty"] = "pretty") -> FilteringBoundLogger:
+def init_logger(
+    format_type: Literal["json", "pretty"] = "pretty"
+) -> FilteringBoundLogger:
     """Initializes logger."""
-    
+
     if format_type == "json":
-        processors = [
+        processors: list[Any] = [
             structlog.stdlib.filter_by_level,
             structlog.stdlib.add_logger_name,
             structlog.stdlib.add_log_level,
@@ -32,13 +33,13 @@ def init_logger(format_type: Literal["json", "pretty"] = "pretty") -> FilteringB
             structlog.processors.UnicodeDecoder(),
             structlog.dev.ConsoleRenderer(colors=True),
         ]
-    
+
     structlog.configure(
         processors=processors,
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
-    
-    logger = structlog.get_logger()
+
+    logger: FilteringBoundLogger = structlog.get_logger()
     return logger

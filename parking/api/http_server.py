@@ -1,15 +1,14 @@
 """FastAPI HTTP server."""
 
-from typing import List, Optional, Annotated
+from typing import Annotated
 
 import structlog
-from fastapi import FastAPI, HTTPException, Query, Path, Depends
+from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from parking.application.use_cases import UseCases
 from parking.domain.models import Coordinates, Parking
-
 
 logger = structlog.get_logger()
 
@@ -17,18 +16,19 @@ logger = structlog.get_logger()
 # Request/Response models
 class ErrorResponse(BaseModel):
     """Error response."""
-    
+
     error: str = Field(..., description="Error type")
     details: str = Field(..., description="Error details")
 
 
 def setup_routes(app: FastAPI) -> None:
     """Sets up routes for FastAPI application."""
-    
+
     # CORS middleware - settings are taken from configuration
-    from parking.infrastructure.config import ServiceConfig
+    from parking.application.config import ServiceConfig
+
     config = ServiceConfig()
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors.allow_origins,
@@ -36,14 +36,14 @@ def setup_routes(app: FastAPI) -> None:
         allow_methods=config.cors.allow_methods,
         allow_headers=config.cors.allow_headers,
     )
-    
+
     def get_use_cases() -> UseCases:
         """Gets use_cases from application state."""
-        return app.state.use_cases
-    
+        return app.state.use_cases  # type: ignore
+
     @app.get(
         "/api/v1/mos_parking/parking",
-        response_model=List[Parking],
+        response_model=list[Parking],
         responses={
             404: {"model": ErrorResponse, "description": "Parkings not found"},
             500: {"model": ErrorResponse, "description": "Internal server error"},
@@ -56,7 +56,7 @@ def setup_routes(app: FastAPI) -> None:
         long: Annotated[float, Query(description="Longitude")],
         distance: Annotated[int, Query(description="Search radius in meters")],
         limit: Annotated[int, Query(description="Maximum number of results")],
-    ) -> List[Parking]:
+    ) -> list[Parking]:
         """Searches for parkings within given radius from coordinates."""
         try:
             use_cases = get_use_cases()
@@ -64,7 +64,7 @@ def setup_routes(app: FastAPI) -> None:
             parkings = await use_cases.get_parking_spot_by_coordinates(
                 coordinates, distance, limit
             )
-            
+
             if not parkings:
                 raise HTTPException(
                     status_code=404,
@@ -73,9 +73,9 @@ def setup_routes(app: FastAPI) -> None:
                         "details": "Parking space not found",
                     },
                 )
-            
+
             return parkings
-            
+
         except HTTPException:
             raise
         except Exception as e:
@@ -83,11 +83,11 @@ def setup_routes(app: FastAPI) -> None:
             raise HTTPException(
                 status_code=500,
                 detail={"error": "Internal Server Error", "details": str(e)},
-            )
-    
+            ) from e
+
     @app.get(
         "/api/v1/mos_parking/parking/search",
-        response_model=List[Parking],
+        response_model=list[Parking],
         responses={
             404: {"model": ErrorResponse, "description": "Parkings not found"},
             500: {"model": ErrorResponse, "description": "Internal server error"},
@@ -97,8 +97,10 @@ def setup_routes(app: FastAPI) -> None:
     )
     async def search_parking_by_name(
         name: Annotated[str, Query(description="Parking name")],
-        limit: Annotated[Optional[int], Query(description="Maximum number of results")] = None,
-    ) -> List[Parking]:
+        limit: Annotated[
+            int | None, Query(description="Maximum number of results")
+        ] = None,
+    ) -> list[Parking]:
         """Searches for parkings by name."""
         try:
             use_cases = get_use_cases()
@@ -106,7 +108,7 @@ def setup_routes(app: FastAPI) -> None:
             if limit is None:
                 limit = config.search.default_limit
             parkings = await use_cases.get_parking_by_name(name, limit)
-            
+
             if not parkings:
                 raise HTTPException(
                     status_code=404,
@@ -115,9 +117,9 @@ def setup_routes(app: FastAPI) -> None:
                         "details": "No parkings found with specified name",
                     },
                 )
-            
+
             return parkings
-            
+
         except HTTPException:
             raise
         except Exception as e:
@@ -125,8 +127,8 @@ def setup_routes(app: FastAPI) -> None:
             raise HTTPException(
                 status_code=500,
                 detail={"error": "Internal Server Error", "details": str(e)},
-            )
-    
+            ) from e
+
     @app.get(
         "/api/v1/mos_parking/parking/{id}",
         response_model=Parking,
@@ -144,7 +146,7 @@ def setup_routes(app: FastAPI) -> None:
         try:
             use_cases = get_use_cases()
             parking = await use_cases.get_parking_by_id(id)
-            
+
             if parking is None:
                 raise HTTPException(
                     status_code=404,
@@ -153,9 +155,9 @@ def setup_routes(app: FastAPI) -> None:
                         "details": "Parking with specified ID not found",
                     },
                 )
-            
+
             return parking
-            
+
         except HTTPException:
             raise
         except Exception as e:
@@ -163,9 +165,8 @@ def setup_routes(app: FastAPI) -> None:
             raise HTTPException(
                 status_code=500,
                 detail={"error": "Internal Server Error", "details": str(e)},
-            )
-    
-    
+            ) from e
+
     @app.post(
         "/api/v1/mos_parking/sync",
         responses={
@@ -180,20 +181,20 @@ def setup_routes(app: FastAPI) -> None:
         try:
             use_cases = get_use_cases()
             await use_cases.save_or_update_parking_spots()
-            
+
             logger.info("Parking data synchronization completed via API")
             return {
-                "status": "success", 
-                "message": "Parking data synchronization completed successfully"
+                "status": "success",
+                "message": "Parking data synchronization completed successfully",
             }
-            
+
         except Exception as e:
             logger.error("Error during parking data synchronization", error=str(e))
             raise HTTPException(
                 status_code=500,
                 detail={"error": "Internal Server Error", "details": str(e)},
-            )
-    
+            ) from e
+
     @app.get("/health", tags=["health"])
     async def health_check() -> dict[str, str]:
         """Service health check."""

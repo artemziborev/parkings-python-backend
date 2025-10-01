@@ -15,9 +15,15 @@ test-cov: ## Run tests with coverage
 	poetry run pytest --cov=parking --cov-report=term-missing --cov-report=html
 
 lint: ## Check code with linters
+	poetry run ruff check .
 	poetry run black --check .
 	poetry run isort --check-only .
 	poetry run mypy parking/
+
+lint-fix: ## Fix linting issues automatically
+	poetry run ruff check --fix .
+	poetry run black .
+	poetry run isort .
 
 format: ## Format code
 	poetry run black .
@@ -51,18 +57,7 @@ test-integration: ## Run integration tests
 
 # Database commands
 db-test-data: ## Load test data
-	docker-compose -f docker-compose.dev.yml exec parking python -c "
-from parking.infrastructure.config import ServiceConfig;
-from parking.infrastructure.mongodb_storage import MongoDBStorage;
-import asyncio;
-async def clear_db():
-    config = ServiceConfig();
-    storage = await MongoDBStorage.connect(config.mongodb);
-    await storage._collection.delete_many({});
-    await storage.close();
-    print('Test data cleared');
-asyncio.run(clear_db())
-"
+	docker-compose -f docker-compose.dev.yml exec parking python -c "from parking.application.config import ServiceConfig; from parking.infrastructure.mongodb_storage import MongoDBStorage; import asyncio; async def clear_db(): config = ServiceConfig(); storage = await MongoDBStorage.connect(config.mongodb); await storage._collection.delete_many({}); await storage.close(); print('Test data cleared'); asyncio.run(clear_db())"
 
 # CI/CD commands
 ci-test: install lint test-cov ## Run all CI checks
